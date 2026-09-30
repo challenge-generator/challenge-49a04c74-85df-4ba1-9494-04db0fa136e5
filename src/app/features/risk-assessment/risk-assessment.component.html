@@ -1,0 +1,177 @@
+<div class="risk-assessment">
+  <div class="risk-assessment__header">
+    <h2 class="risk-assessment__title">Evaluación de Riesgos</h2>
+    <div class="risk-assessment__status" [ngClass]="riskCategory().class">
+      {{ riskCategory().label }}
+    </div>
+  </div>
+
+  <div class="risk-assessment__content">
+    <form [formGroup]="riskAssessmentForm" (ngSubmit)="onSubmit()" class="risk-assessment__form">
+      <div class="risk-assessment__form-row">
+        <mat-form-field appearance="outline" class="risk-assessment__field">
+          <mat-label>ID de Cliente</mat-label>
+          <input matInput formControlName="clientId" placeholder="Ingrese el ID del cliente">
+          <mat-error *ngIf="riskAssessmentForm.get('clientId')?.hasError('required')">
+            El ID de cliente es obligatorio
+          </mat-error>
+          <mat-error *ngIf="riskAssessmentForm.get('clientId')?.hasError('minlength')">
+            El ID debe tener al menos 8 caracteres
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="risk-assessment__field">
+          <mat-label>Monto Solicitado</mat-label>
+          <input matInput type="number" formControlName="requestedAmount" placeholder="0.00">
+          <span matTextSuffix>$</span>
+          <mat-error *ngIf="riskAssessmentForm.get('requestedAmount')?.hasError('required')">
+            El monto es obligatorio
+          </mat-error>
+          <mat-error *ngIf="riskAssessmentForm.get('requestedAmount')?.hasError('min')">
+            El monto mínimo es $1,000
+          </mat-error>
+        </mat-form-field>
+      </div>
+
+      <div class="risk-assessment__form-row">
+        <mat-form-field appearance="outline" class="risk-assessment__field">
+          <mat-label>Plazo (meses)</mat-label>
+          <input matInput type="number" formControlName="loanTerm" placeholder="12">
+          <mat-error *ngIf="riskAssessmentForm.get('loanTerm')?.hasError('required')">
+            El plazo es obligatorio
+          </mat-error>
+          <mat-error *ngIf="riskAssessmentForm.get('loanTerm')?.hasError('min')">
+            El plazo mínimo es 1 mes
+          </mat-error>
+          <mat-error *ngIf="riskAssessmentForm.get('loanTerm')?.hasError('max')">
+            El plazo máximo es 360 meses
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="risk-assessment__field">
+          <mat-label>Valor de Colateral</mat-label>
+          <input matInput type="number" formControlName="collateralValue" placeholder="0.00">
+          <span matTextSuffix>$</span>
+        </mat-form-field>
+      </div>
+
+      <div class="risk-assessment__form-actions">
+        <button mat-raised-button color="primary" type="submit" [disabled]="riskAssessmentForm.invalid || isLoading()">
+          <mat-spinner *ngIf="isLoading()" diameter="20"></mat-spinner>
+          <span *ngIf="!isLoading()">Analizar Riesgo</span>
+        </button>
+        <button mat-stroked-button type="button" (click)="clearResults()" [disabled]="isLoading()">
+          Limpiar
+        </button>
+      </div>
+    </form>
+
+    <div *ngIf="errorMessage()" class="risk-assessment__error">
+      <mat-icon>error</mat-icon>
+      <span>{{ errorMessage() }}</span>
+    </div>
+
+    <div *ngIf="riskProfile()" class="risk-assessment__results">
+      <div class="risk-assessment__score-card">
+        <div class="risk-assessment__score-header">
+          <h3>Puntuación de Riesgo General</h3>
+          <mat-chip [ngClass]="riskCategory().class">{{ riskCategory().label }}</mat-chip>
+        </div>
+        <div class="risk-assessment__score-value" [ngClass]="riskCategory().class">
+          {{ overallRiskScore() | number:'1.0-0' }}
+        </div>
+        <div class="risk-assessment__score-bar">
+          <div class="risk-assessment__score-bar-fill" [ngStyle]="{'width.%': overallRiskScore()}" [ngClass]="riskCategory().class"></div>
+        </div>
+      </div>
+
+      <div class="risk-assessment__factors">
+        <h3 class="risk-assessment__section-title">Factores de Riesgo</h3>
+        <div class="risk-assessment__factors-grid">
+          <div *ngFor="let factor of riskFactors()" class="risk-assessment__factor">
+            <div class="risk-assessment__factor-header">
+              <span class="risk-assessment__factor-category">{{ factor.category }}</span>
+              <span class="risk-assessment__factor-score">{{ factor.score | number:'1.0-0' }}</span>
+            </div>
+            <div class="risk-assessment__factor-bar">
+              <div class="risk-assessment__factor-bar-fill" [ngStyle]="{'width.%': factor.score}"></div>
+            </div>
+            <div class="risk-assessment__factor-details">
+              <span class="risk-assessment__factor-weight">Peso: {{ factor.weight * 100 }}%</span>
+              <span class="risk-assessment__factor-contribution">Contribución: {{ factor.contribution | number:'1.1-1' }}</span>
+            </div>
+            <p class="risk-assessment__factor-description">{{ factor.description }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="creditHistory()" class="risk-assessment__credit-history">
+        <h3 class="risk-assessment__section-title">Resumen de Historial Crediticio</h3>
+        <div class="risk-assessment__history-grid">
+          <div class="risk-assessment__history-item">
+            <span class="risk-assessment__history-label">Total de Cuentas</span>
+            <span class="risk-assessment__history-value">{{ creditHistory()?.totalAccounts }}</span>
+          </div>
+          <div class="risk-assessment__history-item">
+            <span class="risk-assessment__history-label">Cuentas Activas</span>
+            <span class="risk-assessment__history-value">{{ creditHistory()?.activeAccounts }}</span>
+          </div>
+          <div class="risk-assessment__history-item risk-assessment__history-item--warning">
+            <span class="risk-assessment__history-label">Cuentas Morosas</span>
+            <span class="risk-assessment__history-value">{{ creditHistory()?.delinquentAccounts }}</span>
+          </div>
+          <div class="risk-assessment__history-item">
+            <span class="risk-assessment__history-label">Utilización Promedio</span>
+            <span class="risk-assessment__history-value">{{ creditHistory()?.averageUtilization | number:'1.0-0' }}%</span>
+          </div>
+          <div class="risk-assessment__history-item">
+            <span class="risk-assessment__history-label">Consultas Recientes</span>
+            <span class="risk-assessment__history-value">{{ creditHistory()?.recentInquiries }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="risk-assessment__recommendations">
+        <h3 class="risk-assessment__section-title">Recomendaciones</h3>
+        <div class="risk-assessment__recommendations-list">
+          <div *ngIf="isHighRisk()" class="risk-assessment__recommendation risk-assessment__recommendation--high">
+            <mat-icon>warning</mat-icon>
+            <div>
+              <strong>Alto Riesgo Detectado</strong>
+              <p>Se recomienda revisar manualmente la solicitud antes de aprobar. Considere solicitar colateral adicional o reducir el monto solicitado.</p>
+            </div>
+          </div>
+          <div *ngIf="!isHighRisk() && canApprove()" class="risk-assessment__recommendation risk-assessment__recommendation--approved">
+            <mat-icon>check_circle</mat-icon>
+            <div>
+              <strong>Aprobación Recomendada</strong>
+              <p>El perfil de riesgo cumple con los criterios de aprobación. Continúe con el proceso deoriginación.</p>
+            </div>
+          </div>
+          <div *ngIf="riskProfile()?.debtToIncomeRatio && riskProfile()!.debtToIncomeRatio > 0.4" class="risk-assessment__recommendation risk-assessment__recommendation--warning">
+            <mat-icon>info</mat-icon>
+            <div>
+              <strong>Monitorear Relación Deuda-Ingreso</strong>
+              <p>La relación deuda/ingreso supera el 40%. Se sugiere evaluar la capacidad de pago del solicitante.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="risk-assessment__actions">
+        <button mat-raised-button color="accent" (click)="analyzeCreditRisk()" [disabled]="isLoading()">
+          <mat-spinner *ngIf="isLoading()" diameter="20"></mat-spinner>
+          <span *ngIf="!isLoading()">Análisis de Crédito</span>
+        </button>
+        <button mat-raised-button color="primary" (click)="updateRiskProfile()" [disabled]="isLoading() || !riskProfile()">
+          Actualizar Perfil
+        </button>
+      </div>
+    </div>
+
+    <div *ngIf="!riskProfile() && !isLoading()" class="risk-assessment__empty">
+      <mat-icon>assessment</mat-icon>
+      <p>Ingrese el ID de cliente y seleccione "Analizar Riesgo" para ver la evaluación</p>
+    </div>
+  </div>
+</div>

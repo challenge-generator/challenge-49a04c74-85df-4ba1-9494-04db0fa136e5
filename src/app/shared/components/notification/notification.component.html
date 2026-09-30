@@ -1,0 +1,46 @@
+<div
+  *ngIf="isVisible()"
+  class="notification-container"
+  [class]="containerClass()"
+  role="alert"
+  aria-live="polite"
+  (keydown)="onKeyDown($event)"
+  [attr.aria-label]="notification()?.title"
+>
+  <div class="notification-icon" aria-hidden="true">
+    <span class="material-icon">{{ iconClass() }}</span>
+  </div>
+
+  <div class="notification-content">
+    <div class="notification-header">
+      <h3 class="notification-title">{{ notification()?.title }}</h3>
+      <button
+        *ngIf="notification()?.dismissible"
+        class="notification-close"
+        (click)="dismissNotification()"
+        aria-label="Cerrar notificación"
+        type="button"
+      >
+        <span class="close-icon" aria-hidden="true">&times;</span>
+      </button>
+    </div>
+
+    <p class="notification-message">{{ notification()?.message }}</p>
+
+    <button
+      *ngIf="notification()?.action"
+      class="notification-action"
+      (click)="onActionClick()"
+      type="button"
+    >
+      {{ notification()?.action?.label }}
+    </button>
+  </div>
+
+  <div class="notification-progress" *ngIf="notification()?.duration">
+    <div
+      class="progress-bar"
+      [style.animation-duration.ms]="notification()?.duration"
+    ></div>
+  </div>
+</div>

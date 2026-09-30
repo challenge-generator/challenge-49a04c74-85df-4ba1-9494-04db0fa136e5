@@ -1,0 +1,243 @@
+<div class="credit-processing-container">
+  <mat-card class="credit-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>account_balance</mat-icon>
+        Procesamiento de Crédito
+      </mat-card-title>
+      <mat-card-subtitle>
+        Complete el formulario para iniciar la evaluación de su solicitud
+      </mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (state().step === 'error') {
+        <div class="error-banner">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ state().errorMessage }}</span>
+          <button mat-stroked-button color="primary" (click)="resetForm()">
+            <mat-icon>refresh</mat-icon>
+            Nueva Solicitud
+          </button>
+        </div>
+      }
+
+      @if (state().step === 'completed') {
+        <div class="success-banner">
+          <mat-icon>check_circle</mat-icon>
+          <div class="success-content">
+            <h3>Solicitud Aprobada</h3>
+            <p>ID de aprobación: <strong>{{ state().approvalId }}</strong></p>
+            @if (state().riskResult) {
+              <p>Score de riesgo: {{ state().riskResult?.riskScore }}/100</p>
+            }
+          </div>
+          <button mat-stroked-button color="primary" (click)="resetForm()">
+            <mat-icon>add</mat-icon>
+            Nueva Solicitud
+          </button>
+        </div>
+      }
+
+      <mat-stepper [linear]="true" [selectedIndex]="currentStep()" #stepper>
+        <mat-step [stepControl]="creditForm" label="Datos del Cliente">
+          <form [formGroup]="creditForm" class="form-section">
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>ID Cliente</mat-label>
+                <input matInput formControlName="clientId" placeholder="CLT-00001">
+                <mat-error>{{ getErrorMessage('clientId') }}</mat-error>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Nombre Completo</mat-label>
+                <input matInput formControlName="clientName" placeholder="Juan Pérez">
+                <mat-error>{{ getErrorMessage('clientName') }}</mat-error>
+              </mat-form-field>
+            </div>
+
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Correo Electrónico</mat-label>
+                <input matInput type="email" formControlName="clientEmail" placeholder="juan@ejemplo.com">
+                <mat-error>{{ getErrorMessage('clientEmail') }}</mat-error>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Teléfono</mat-label>
+                <input matInput formControlName="clientPhone" placeholder="+1234567890">
+                <mat-error>{{ getErrorMessage('clientPhone') }}</mat-error>
+              </mat-form-field>
+            </div>
+
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Estado de Empleo</mat-label>
+                <mat-select formControlName="employmentStatus">
+                  @for (status of employmentStatuses; track status.value) {
+                    <mat-option [value]="status.value">{{ status.label }}</mat-option>
+                  }
+                </mat-select>
+                <mat-error>{{ getErrorMessage('employmentStatus') }}</mat-error>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Ingreso Mensual</mat-label>
+                <input matInput type="number" formControlName="monthlyIncome" placeholder="5000">
+                <span matTextSuffix>USD</span>
+                <mat-error>{{ getErrorMessage('monthlyIncome') }}</mat-error>
+              </mat-form-field>
+            </div>
+
+            <div class="step-actions">
+              <button mat-flat-button color="primary" matStepperNext [disabled]="!creditForm.valid">
+                Siguiente
+                <mat-icon>arrow_forward</mat-icon>
+              </button>
+            </div>
+          </form>
+        </mat-step>
+
+        <mat-step label="Detalles del Crédito">
+          <form [formGroup]="creditForm" class="form-section">
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Monto Solicitado</mat-label>
+                <input matInput type="number" formControlName="requestedAmount" placeholder="50000">
+                <span matTextSuffix>USD</span>
+                <mat-error>{{ getErrorMessage('requestedAmount') }}</mat-error>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Moneda</mat-label>
+                <mat-select formControlName="currency">
+                  @for (currency of currencies; track currency) {
+                    <mat-option [value]="currency">{{ currency }}</mat-option>
+                  }
+                </mat-select>
+                <mat-error>{{ getErrorMessage('currency') }}</mat-error>
+              </mat-form-field>
+            </div>
+
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Plazo (meses)</mat-label>
+                <input matInput type="number" formControlName="loanTerm" placeholder="24">
+                <mat-error>{{ getErrorMessage('loanTerm') }}</mat-error>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Propósito del Crédito</mat-label>
+                <mat-select formControlName="loanPurpose">
+                  @for (purpose of loanPurposes; track purpose.value) {
+                    <mat-option [value]="purpose.value">{{ purpose.label }}</mat-option>
+                  }
+                </mat-select>
+                <mat-error>{{ getErrorMessage('loanPurpose') }}</mat-error>
+              </mat-form-field>
+            </div>
+
+            <div class="step-actions">
+              <button mat-stroked-button matStepperPrevious>
+                <mat-icon>arrow_back</mat-icon>
+                Atrás
+              </button>
+              <button mat-flat-button color="primary" matStepperNext [disabled]="!creditForm.valid">
+                Siguiente
+                <mat-icon>arrow_forward</mat-icon>
+              </button>
+            </div>
+          </form>
+        </mat-step>
+
+        <mat-step label="Revisión y Envío">
+          <div class="review-section">
+            <h3>Resumen de la Solicitud</h3>
+            
+            <div class="summary-grid">
+              <div class="summary-item">
+                <span class="label">Cliente:</span>
+                <span class="value">{{ creditForm.get('clientName')?.value }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">Email:</span>
+                <span class="value">{{ creditForm.get('clientEmail')?.value }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">Monto:</span>
+                <span class="value">{{ creditForm.get('requestedAmount')?.value | number }} {{ creditForm.get('currency')?.value }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">Plazo:</span>
+                <span class="value">{{ creditForm.get('loanTerm')?.value }} meses</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">Propósito:</span>
+                <span class="value">{{ creditForm.get('loanPurpose')?.value }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">Ingreso Mensual:</span>
+                <span class="value">{{ creditForm.get('monthlyIncome')?.value | number }} USD</span>
+              </div>
+            </div>
+
+            <div class="step-actions">
+              <button mat-stroked-button matStepperPrevious [disabled]="isLoading()">
+                <mat-icon>arrow_back</mat-icon>
+                Atrás
+              </button>
+              <button 
+                mat-flat-button 
+                color="primary" 
+                (click)="onSubmit()" 
+                [disabled]="!canSubmit()">
+                @if (isLoading()) {
+                  <mat-spinner diameter="20"></mat-spinner>
+                  Procesando...
+                } @else {
+                  <mat-icon>send</mat-icon>
+                  Enviar Solicitud
+                }
+              </button>
+            </div>
+          </div>
+        </mat-step>
+
+        <mat-step label="Procesamiento">
+          <div class="processing-section">
+            @switch (state().step) {
+              @case ('submitting') {
+                <mat-spinner diameter="50"></mat-spinner>
+                <p>Enviando solicitud al originador de créditos...</p>
+              }
+              @case ('fraud-check') {
+                <mat-spinner diameter="50"></mat-spinner>
+                <p>Ejecutando verificación antifraude...</p>
+              }
+              @case ('risk-assessment') {
+                <mat-spinner diameter="50"></mat-spinner>
+                <p>Evaluando riesgo crediticio...</p>
+              }
+              @default {
+                <p>Estado del procesamiento: {{ state().step }}</p>
+              }
+            }
+          </div>
+        </mat-step>
+
+        <mat-step label="Resultado">
+          <div class="result-section">
+            @if (state().step === 'completed') {
+              <mat-icon class="result-icon success">check_circle</mat-icon>
+              <h3>¡Solicitud Procesada Exitosamente!</h3>
+              <p>Su solicitud ha sido aprobada y procesada.</p>
+              <button mat-flat-button color="primary" (click)="resetForm()">
+                Nueva Solicitud
+              </button>
+            }
+          </div>
+        </mat-step>
+      </mat-stepper>
+    </mat-card-content>
+  </mat-card>
+</div>
